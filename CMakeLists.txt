@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(project_sources
     main.cpp
+    Matrix.h
     )
 
 add_executable(InfiniteMatrix ${project_sources} )

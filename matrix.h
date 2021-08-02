@@ -4,16 +4,10 @@
 #include <map>
 #include <memory>
 #include <fstream>
-#include "vecIterator.h"
 
 template <typename T, T DEFAULT_VALUE, size_t DIMENSIONS = 2>
 class Matrix
 {
-	using iterator = VecIterator<T>;
-	using const_iterator = VecIterator<const T>;
-	using reverse_iterator =  VecIterator<T>;
-	using const_reverse_iterator =  VecIterator<const T>;
-
 	using Storage = std::map<std::vector<size_t>, T>;
 public:
 	Matrix()
@@ -58,7 +52,11 @@ public:
 	{
 		return m_Storage->empty();
 	}
-
+	/* Iterators */
+	auto begin() const { return m_Storage->begin(); }
+	auto end() const { return m_Storage->end(); }
+	auto cbegin() const { return m_Storage->cbegin();}
+	auto cend() const { return m_Storage->cend();}
 private:
 	std::shared_ptr<Storage> m_Storage;
 	std::vector<size_t> m_Position;
@@ -84,11 +82,7 @@ public:
 	};
 	bool operator==(const T& value) const
 	{
-		if (m_Storage->find(m_Position) == m_Storage->end())
-		{
-			return DEFAULT_VALUE == value;
-		}
-		return m_Storage->at(m_Position) == value;
+		return this->operator()() == value;
 	}
 	T operator() () const
 	{
@@ -108,6 +102,7 @@ public:
 		m_Storage->clear();
 		m_Position.clear();
 	}
+
 private:
 	std::shared_ptr<Storage> m_Storage;
 	std::vector<size_t> m_Position;

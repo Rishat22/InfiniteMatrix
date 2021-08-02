@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <fstream>
 #include "vecIterator.h"
 
 template <typename T, T DEFAULT_VALUE, size_t DIMENSIONS = 2>
@@ -17,55 +18,51 @@ class Matrix
 public:
 	Matrix()
 		: m_Storage(std::make_shared<Storage>())
-		, m_InternalMatrix(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage))
+		, m_InternalMatrix(std::make_shared<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
 	{
 
 	}
 	Matrix(std::shared_ptr<Storage> storage,
-		   std::vector<int> position)
+		   std::vector<size_t> position)
 		: m_Storage(storage)
-		, m_InternalMatrix(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage))
+		, m_Position(std::move(position))
+		, m_InternalMatrix(std::make_shared<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
 	{}
 	~Matrix()
 	{
 		clear();
 	}
-	void setPosition()
-	{
-		m_Storage.clear();
-	}
 	void clear()
 	{
-		m_Storage.clear();
+		m_Storage->clear();
+		m_Position.clear();
+		m_InternalMatrix->clear();
 	}
-	const Matrix<T, DEFAULT_VALUE>& operator[](const size_t index) const
+	const Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>& operator[](const size_t index) const
 	{
-		std::vector<size_t> child_position;
-		std::copy(m_Position.begin(),m_Position.end(), std::back_inserter(child_position));
-		child_position.push_back(index);
-//		return *(new Matrix(m_Storage, child_position));
-		return *m_InternalMatrix;
+		std::vector<size_t> internal_position = m_Position;
+		internal_position.push_back(index);
+		return *(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage, internal_position));
 	}
-	Matrix<T, DEFAULT_VALUE>& operator[](const size_t index)
+	Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>& operator[](const size_t index)
 	{
-		std::vector<size_t> child_position;
-		std::copy(m_Position.begin(),m_Position.end(), std::back_inserter(child_position));
-		child_position.push_back(index);
-		return *m_InternalMatrix;
+		std::vector<size_t> internal_position = m_Position;
+		internal_position.push_back(index);
+		return *(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage, internal_position));
 	}
-	size_t Size() const
+	size_t size() const
 	{
-		return m_Storage.size();
+		return m_Storage->size();
 	}
-	bool Empty() const
+	bool empty() const
 	{
-		return m_Storage.empty();
+		return m_Storage->empty();
 	}
 
 private:
-	std::shared_ptr<Matrix> m_InternalMatrix;
 	std::shared_ptr<Storage> m_Storage;
 	std::vector<size_t> m_Position;
+	std::shared_ptr<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>> m_InternalMatrix;
 };
 
 template <typename T, T DEFAULT_VALUE>
@@ -82,7 +79,7 @@ public:
 		if (value == DEFAULT_VALUE)
 			m_Storage->erase(m_Position);
 		else
-			m_Storage.get()[m_Position] = value;
+			(*m_Storage)[m_Position] = value;
 		return *this;
 	};
 	bool operator==(const T& value) const
@@ -91,20 +88,25 @@ public:
 		{
 			return DEFAULT_VALUE == value;
 		}
-		return m_Storage(m_Position) == value;
+		return m_Storage->at(m_Position) == value;
 	}
-	explicit operator T() const
+	T operator() () const
 	{
 		if (m_Storage->find(m_Position) == m_Storage->end())
 		{
 			return DEFAULT_VALUE;
 		}
-		return m_Storage(m_Position);
+		return m_Storage->at(m_Position);
 	}
 	friend std::ostream& operator<< (std::ostream& out,
 									const Matrix<T, DEFAULT_VALUE, 0>& matrix)
 	{
 	  return out << matrix();
+	}
+	void clear()
+	{
+		m_Storage->clear();
+		m_Position.clear();
 	}
 private:
 	std::shared_ptr<Storage> m_Storage;

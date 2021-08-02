@@ -4,6 +4,7 @@
 int main()
 {
 	Matrix<int, -1> matrix;
-	std::cout << matrix[0][0];
+	matrix[0][0] = 100;
+	std::cout << matrix[0][0] << std::endl;
 	return 0;
 }

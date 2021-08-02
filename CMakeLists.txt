@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(project_sources
     main.cpp
     vecIterator.h
-    Matrix.h
+    matrix.h
     )
 
 add_executable(InfiniteMatrix ${project_sources} )

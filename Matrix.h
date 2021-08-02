@@ -1,64 +1,11 @@
 #ifndef MATRIX_H
 #define MATRIX_H
-#include <stddef.h>
-#include <algorithm>
-#include <utility>
+#include <vector>
+#include <map>
+#include <memory>
+#include "vecIterator.h"
 
-template<typename lDataType>
-class VecIterator
-{
-public:
-
-	using iterator_category = std::random_access_iterator_tag;
-	using value_type = lDataType;
-	using difference_type = std::ptrdiff_t;
-	using pointer = lDataType*;
-	using reference = lDataType&;
-
-public:
-
-	VecIterator(lDataType* ptr = nullptr){m_Ptr = ptr;}
-	VecIterator(const VecIterator<lDataType>& rawIterator) = default;
-	~VecIterator() = default;
-
-	VecIterator<lDataType>&                  operator=(const VecIterator<lDataType>& rawIterator) = default;
-	VecIterator<lDataType>&                  operator=(lDataType* ptr){m_Ptr = ptr;return (*this);}
-
-	operator                                    bool()const
-	{
-		if(m_Ptr)
-			return true;
-		else
-			return false;
-	}
-
-	bool                                        operator==(const VecIterator<lDataType>& rawIterator)const{return (m_Ptr == rawIterator.getConstPtr());}
-	bool                                        operator!=(const VecIterator<lDataType>& rawIterator)const{return (m_Ptr != rawIterator.getConstPtr());}
-
-	VecIterator<lDataType>&                  operator+=(const difference_type& movement){m_Ptr += movement;return (*this);}
-	VecIterator<lDataType>&                  operator-=(const difference_type& movement){m_Ptr -= movement;return (*this);}
-	VecIterator<lDataType>&                  operator++(){++m_Ptr;return (*this);}
-	VecIterator<lDataType>&                  operator--(){--m_Ptr;return (*this);}
-	VecIterator<lDataType>                   operator++(int){auto temp(*this);++m_Ptr;return temp;}
-	VecIterator<lDataType>                   operator--(int){auto temp(*this);--m_Ptr;return temp;}
-	VecIterator<lDataType>                   operator+(const difference_type& movement){auto oldPtr = m_Ptr;m_Ptr+=movement;auto temp(*this);m_Ptr = oldPtr;return temp;}
-	VecIterator<lDataType>                   operator-(const difference_type& movement){auto oldPtr = m_Ptr;m_Ptr-=movement;auto temp(*this);m_Ptr = oldPtr;return temp;}
-
-	difference_type                             operator-(const VecIterator<lDataType>& rawIterator){return std::distance(rawIterator.getPtr(),this->getPtr());}
-
-	lDataType&                                 operator*(){return *m_Ptr;}
-	const lDataType&                           operator*()const{return *m_Ptr;}
-	lDataType*                                 operator->(){return m_Ptr;}
-
-	lDataType*                                 getPtr()const{return m_Ptr;}
-	const lDataType*                           getConstPtr()const{return m_Ptr;}
-
-protected:
-
-	lDataType*                                 m_Ptr;
-};
-
-template <typename T>
+template <typename T, T DEFAULT_VALUE, size_t DIMENSIONS = 2>
 class Matrix
 {
 	using iterator = VecIterator<T>;
@@ -66,118 +13,103 @@ class Matrix
 	using reverse_iterator =  VecIterator<T>;
 	using const_reverse_iterator =  VecIterator<const T>;
 
+	using Storage = std::map<std::vector<size_t>, T>;
 public:
 	Matrix()
+		: m_Storage(std::make_shared<Storage>())
+		, m_InternalMatrix(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage))
 	{
-		ReAlloc(2);
+
 	}
-	~Matrix();
-
-	void Clear();
-	void PushBack(const T& value);
-	void PushBack(const T&& value);
-	const T& operator[](const size_t index) const;
-	T& operator[](const size_t index);
-	size_t Size() const;
-	bool Empty() const;
-
-	/* Iterators */
-	iterator			begin() const { return iterator(&m_Data[0]); }
-	iterator			end() const { return iterator(&m_Data[m_Size]); }
-	const_iterator	cbegin() const { return const_iterator(&m_Data[0]);}
-	const_iterator	cend() const { return const_iterator(&m_Data[m_Size]);}
+	Matrix(std::shared_ptr<Storage> storage,
+		   std::vector<int> position)
+		: m_Storage(storage)
+		, m_InternalMatrix(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage))
+	{}
+	~Matrix()
+	{
+		clear();
+	}
+	void setPosition()
+	{
+		m_Storage.clear();
+	}
+	void clear()
+	{
+		m_Storage.clear();
+	}
+	const Matrix<T, DEFAULT_VALUE>& operator[](const size_t index) const
+	{
+		std::vector<size_t> child_position;
+		std::copy(m_Position.begin(),m_Position.end(), std::back_inserter(child_position));
+		child_position.push_back(index);
+//		return *(new Matrix(m_Storage, child_position));
+		return *m_InternalMatrix;
+	}
+	Matrix<T, DEFAULT_VALUE>& operator[](const size_t index)
+	{
+		std::vector<size_t> child_position;
+		std::copy(m_Position.begin(),m_Position.end(), std::back_inserter(child_position));
+		child_position.push_back(index);
+		return *m_InternalMatrix;
+	}
+	size_t Size() const
+	{
+		return m_Storage.size();
+	}
+	bool Empty() const
+	{
+		return m_Storage.empty();
+	}
 
 private:
-	void ReAlloc(const size_t newCapacity);
-private:
-	T* m_Data = nullptr;
-	size_t m_Size = 0;
-	size_t m_Capacity = 0;
+	std::shared_ptr<Matrix> m_InternalMatrix;
+	std::shared_ptr<Storage> m_Storage;
+	std::vector<size_t> m_Position;
 };
 
-template<typename T>
-Matrix<T>::~Matrix()
+template <typename T, T DEFAULT_VALUE>
+class Matrix<T, DEFAULT_VALUE, 0>
 {
-	Clear();
-	::operator delete( m_Data, m_Capacity * sizeof (T) );
-}
-
-template<typename T>
-void Matrix<T>::Clear()
-{
-	for(size_t i = 0; i < m_Size; i++)
-		m_Data[i].~T();
-}
-
-template<typename T>
-void Matrix<T>::PushBack(const T& value)
-{
-	if(m_Size >= m_Capacity)
-		ReAlloc(m_Capacity + m_Capacity /2);
-
-	m_Data[m_Size] = value;
-	m_Size++;
-}
-
-template<typename T>
-void Matrix<T>::PushBack(const T&& value)
-{
-	if(m_Size >= m_Capacity)
-		ReAlloc(m_Capacity + m_Capacity /2);
-
-	m_Data[m_Size] = std::move(value);
-	m_Size++;
-}
-
-template<typename T>
-const T& Matrix<T>::operator[](const size_t index) const
-{
-	if(index >= m_Size)
+	using Storage = std::map<std::vector<size_t>, T>;
+public:
+	Matrix(std::shared_ptr<Storage> storage,
+		   std::vector<size_t> position)
+		: m_Storage(storage), m_Position(std::move(position))
+	{}
+	Matrix<T, DEFAULT_VALUE, 0>& operator= (const T &value)
 	{
-		//assert
-	}
-	return m_Data[index];
-}
-
-template<typename T>
-T& Matrix<T>::operator[](const size_t index)
-{
-	if(index >= m_Size)
+		if (value == DEFAULT_VALUE)
+			m_Storage->erase(m_Position);
+		else
+			m_Storage.get()[m_Position] = value;
+		return *this;
+	};
+	bool operator==(const T& value) const
 	{
-		//assert
+		if (m_Storage->find(m_Position) == m_Storage->end())
+		{
+			return DEFAULT_VALUE == value;
+		}
+		return m_Storage(m_Position) == value;
 	}
-	return m_Data[index];
-}
+	explicit operator T() const
+	{
+		if (m_Storage->find(m_Position) == m_Storage->end())
+		{
+			return DEFAULT_VALUE;
+		}
+		return m_Storage(m_Position);
+	}
+	friend std::ostream& operator<< (std::ostream& out,
+									const Matrix<T, DEFAULT_VALUE, 0>& matrix)
+	{
+	  return out << matrix();
+	}
+private:
+	std::shared_ptr<Storage> m_Storage;
+	std::vector<size_t> m_Position;
+};
 
-template<typename T>
-size_t Matrix<T>::Size() const
-{
-	return m_Size;
-}
-
-template<typename T>
-bool Matrix<T>::Empty() const
-{
-	return m_Size == 0;
-}
-
-template <typename T>
-void Matrix<T>::ReAlloc(const size_t newCapacity)
-{
-	T* newBlock = (T*)::operator new( newCapacity * sizeof (T) );
-
-	if(newCapacity < m_Size)
-			m_Size = newCapacity;
-
-	for(size_t i = 0; i < m_Size; i++)
-		newBlock[i] = std::move(m_Data[i]);
-
-	for(size_t i = 0; i < m_Size; i++)
-		m_Data[i].~T();
-
-	::operator delete( m_Data,m_Capacity * sizeof (T));
-	m_Data = newBlock;
-	m_Capacity = newCapacity;
-}
 
 #endif // MATRIX_H

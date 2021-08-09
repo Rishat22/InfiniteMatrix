@@ -12,7 +12,7 @@ class Matrix
 public:
 	Matrix()
 		: m_Storage(std::make_shared<Storage>())
-		, m_InternalMatrix(std::make_shared<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
+		, m_InternalMatrix(std::make_unique<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
 	{
 
 	}
@@ -20,7 +20,7 @@ public:
 		   std::vector<size_t> position)
 		: m_Storage(storage)
 		, m_Position(std::move(position))
-		, m_InternalMatrix(std::make_shared<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
+		, m_InternalMatrix(std::make_unique<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
 	{}
 	~Matrix()
 	{
@@ -32,17 +32,13 @@ public:
 		m_Position.clear();
 		m_InternalMatrix->clear();
 	}
-	const Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>& operator[](const size_t index) const
-	{
-		std::vector<size_t> internal_position = m_Position;
-		internal_position.push_back(index);
-		return *(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage, internal_position));
-	}
 	Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>& operator[](const size_t index)
 	{
+		m_InternalMatrix->m_Storage = m_Storage;
 		std::vector<size_t> internal_position = m_Position;
 		internal_position.push_back(index);
-		return *(new Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>(m_Storage, internal_position));
+		m_InternalMatrix->m_Position = internal_position;
+		return *m_InternalMatrix;
 	}
 	size_t size() const
 	{
@@ -57,10 +53,12 @@ public:
 	auto end() const { return m_Storage->end(); }
 	auto cbegin() const { return m_Storage->cbegin();}
 	auto cend() const { return m_Storage->cend();}
+
+	friend class Matrix<T, DEFAULT_VALUE, DIMENSIONS + 1>;
 private:
 	std::shared_ptr<Storage> m_Storage;
 	std::vector<size_t> m_Position;
-	std::shared_ptr<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>> m_InternalMatrix;
+	std::unique_ptr<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>> m_InternalMatrix;
 };
 
 template <typename T, T DEFAULT_VALUE>
@@ -103,6 +101,7 @@ public:
 		m_Position.clear();
 	}
 
+	friend class Matrix<T, DEFAULT_VALUE, 1>;
 private:
 	std::shared_ptr<Storage> m_Storage;
 	std::vector<size_t> m_Position;

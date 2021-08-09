@@ -12,16 +12,9 @@ class Matrix
 public:
 	Matrix()
 		: m_Storage(std::make_shared<Storage>())
-		, m_InternalMatrix(std::make_unique<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
+		, m_InternalMatrix(std::make_unique<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>())
 	{
-
 	}
-	Matrix(std::shared_ptr<Storage> storage,
-		   std::vector<size_t> position)
-		: m_Storage(storage)
-		, m_Position(std::move(position))
-		, m_InternalMatrix(std::make_unique<Matrix<T, DEFAULT_VALUE, DIMENSIONS - 1>>(m_Storage, m_Position))
-	{}
 	~Matrix()
 	{
 		clear();
@@ -66,10 +59,10 @@ class Matrix<T, DEFAULT_VALUE, 0>
 {
 	using Storage = std::map<std::vector<size_t>, T>;
 public:
-	Matrix(std::shared_ptr<Storage> storage,
-		   std::vector<size_t> position)
-		: m_Storage(storage), m_Position(std::move(position))
-	{}
+	Matrix()
+		: m_Storage(std::make_shared<Storage>())
+	{
+	}
 	Matrix<T, DEFAULT_VALUE, 0>& operator= (const T &value)
 	{
 		if (value == DEFAULT_VALUE)
